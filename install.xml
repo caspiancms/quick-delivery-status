@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+    <name>Quick Delivery Status with EditOrderStatus</name>
+    <code>quick_delivery_status_with_edit</code>
+    <version>2.3</version>
+    <author>YourName</author>
+
+    <!-- اضافه کردن دکمه به ستون Action توی ردیف‌ها -->
+    <file path="admin/view/template/sale/order_list.twig">
+        <operation>
+            <search><![CDATA[
+            <td class="text-right"><div style="min-width: 120px;">
+            ]]></search>
+            <add position="replace"><![CDATA[
+            <td class="text-right"><div style="min-width: 120px;">
+                <a href="{{ url_delivered }}&order_id={{ order.order_id }}&delivered=1" class="btn btn-success btn-sm" title="تحویل شد"><i class="fa fa-check"></i></a>
+            ]]></add>
+        </operation>
+    </file>
+
+    <!-- اضافه کردن تابع deliverOrder و لینک دکمه به کنترلر -->
+    <file path="admin/controller/sale/order.php">
+        <operation>
+            <search><![CDATA[
+            class ControllerSaleOrder extends Controller {
+            ]]></search>
+            <add position="after"><![CDATA[
+            public function deliverOrder() {
+                $this->load->model('sale/order');
+                if (isset($this->request->get['order_id']) && isset($this->request->get['delivered'])) {
+                    $order_id = $this->request->get['order_id'];
+                    $this->model_sale_order->editOrderStatus($order_id, 3); // 3 = Shipped
+                    $this->response->redirect($this->url->link('sale/order', 'user_token=' . $this->session->data['user_token'], true));
+                }
+            }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+            $data['orders'] = array();
+            ]]></search>
+            <add position="before"><![CDATA[
+            $data['url_delivered'] = $this->url->link('sale/order/deliverOrder', 'user_token=' . $this->session->data['user_token'], true);
+            ]]></add>
+        </operation>
+    </file>
+
+    <!-- اضافه کردن تابع editOrderStatus به مدل -->
+    <file path="admin/model/sale/order.php">
+        <operation>
+            <search><![CDATA[
+            class ModelSaleOrder extends Model {
+            ]]></search>
+            <add position="after"><![CDATA[
+            public function editOrderStatus($order_id, $order_status_id) {
+                $this->db->query("UPDATE `" . DB_PREFIX . "order` SET order_status_id = '" . (int)$order_status_id . "', date_modified = NOW() WHERE order_id = '" . (int)$order_id . "'");
+
+                $this->db->query("INSERT INTO " . DB_PREFIX . "order_history SET order_id = '" . (int)$order_id . "', order_status_id = '" . (int)$order_status_id . "', notify = '0', comment = 'تغییر وضعیت توسط پیک', date_added = NOW()");
+            }
+            ]]></add>
+        </operation>
+    </file>
+</modification>
